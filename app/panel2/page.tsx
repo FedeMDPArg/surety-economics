@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { money, pct } from "@/lib/utils";
 import { MetricCard, NumberSliderInput } from "@/components/panel-ui";
 import { useSuretyStore } from "@/lib/store";
+import { simulatePortfolio, type MonthRow } from "@/lib/simulation";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -48,86 +49,12 @@ function creditMultiplier(score: number) {
   return 1.5 - normalized * 0.8;
 }
 
-type MonthRow = {
-  month: number;
-  newPremium: number;
-  renewalPremium: number;
-  totalPremium: number;
-  nickGross: number;
-  nickNet: number;
-  cumulativePremium: number;
-  cumulativeNickNet: number;
-};
-
 /**
  * Cohort-based simulation, aware of per-bond-type premiums and renewal rates.
  * Each "cohort" is a batch of the same portfolio mix issued in a single month.
  * Volume grows each year by (1 + yoyGrowth).
  */
-function simulatePortfolio(params: {
-  cohorts: { premiumPerBond: number; quantity: number; renewalRate: number }[];
-  churn: number;
-  yoyGrowth: number;
-  horizonYears: number;
-  nickTakeRate: number;
-  costPctOfPremium: number; // CAC + OpEx + team (applied on premium)
-}): MonthRow[] {
-  const { cohorts, churn, yoyGrowth, horizonYears, nickTakeRate, costPctOfPremium } = params;
-  const months = horizonYears * 12;
-  const rows: MonthRow[] = [];
-  let cumulativePremium = 0;
-  let cumulativeNickNet = 0;
-
-  // Precompute "base" cohort economics (premium per month for a single cohort, by type)
-  // One cohort = one month of issuance
-
-  for (let m = 1; m <= months; m++) {
-    // Volume scaler: bonds this month = base × (1 + yoyGrowth)^(years elapsed)
-    const monthScaler = Math.pow(1 + yoyGrowth, (m - 1) / 12);
-
-    // New premium: all cohort types issued this month
-    let newPremium = 0;
-    for (const c of cohorts) {
-      newPremium += c.premiumPerBond * c.quantity * monthScaler;
-    }
-
-    // Renewal premium: sum over all past cohort-months c where (m - c) is multiple of 12
-    let renewalPremium = 0;
-    for (let cMonth = 1; cMonth < m; cMonth++) {
-      if ((m - cMonth) % 12 !== 0) continue;
-      const ageYears = (m - cMonth) / 12;
-      const originalMonthScaler = Math.pow(1 + yoyGrowth, (cMonth - 1) / 12);
-      const survival = Math.pow(1 - churn, ageYears);
-      for (const c of cohorts) {
-        renewalPremium +=
-          c.premiumPerBond *
-          c.quantity *
-          originalMonthScaler *
-          c.renewalRate *
-          survival;
-      }
-    }
-
-    const totalPremium = newPremium + renewalPremium;
-    const nickGross = totalPremium * nickTakeRate;
-    const nickNet = totalPremium * (nickTakeRate - costPctOfPremium);
-    cumulativePremium += totalPremium;
-    cumulativeNickNet += nickNet;
-
-    rows.push({
-      month: m,
-      newPremium,
-      renewalPremium,
-      totalPremium,
-      nickGross,
-      nickNet,
-      cumulativePremium,
-      cumulativeNickNet,
-    });
-  }
-
-  return rows;
-}
+// simulatePortfolio moved to lib/simulation.ts for reuse in Panel 1 preview
 
 export default function Panel2Page() {
   // ─── Shared store state ───
@@ -154,6 +81,10 @@ export default function Panel2Page() {
   const [manualPremiumPerBond, setManualPremiumPerBond] = useState(1000);
   const [manualRenewal, setManualRenewal] = useState(0.8);
   const [revenueView, setRevenueView] = useState<RevenueView>("nick-gross");
+
+  // Feature: "Assume carrier deal at month X" — simulates Panel 3's integration effect
+  const [carrierDealEnabled, setCarrierDealEnabled] = useState(false);
+  const [carrierDealMonth, setCarrierDealMonth] = useState(12);
 
   useEffect(() => {
     const supabase = createClient();
@@ -220,6 +151,8 @@ export default function Panel2Page() {
     ];
   }, [usePortfolio, portfolioCohorts, manualBondsPerMonth, manualPremiumPerBond, manualRenewal]);
 
+  const effectiveCarrierDeal = carrierDealEnabled ? carrierDealMonth : null;
+
   const rows = useMemo(
     () =>
       simulatePortfolio({
@@ -229,8 +162,9 @@ export default function Panel2Page() {
         horizonYears: timeHorizonYears,
         nickTakeRate,
         costPctOfPremium,
+        carrierDealMonth: effectiveCarrierDeal,
       }),
-    [cohorts, churn, yoyGrowth, timeHorizonYears, nickTakeRate, costPctOfPremium],
+    [cohorts, churn, yoyGrowth, timeHorizonYears, nickTakeRate, costPctOfPremium, effectiveCarrierDeal],
   );
 
   // Same simulation but for the OTHER mode — for comparison
@@ -244,8 +178,9 @@ export default function Panel2Page() {
         horizonYears: timeHorizonYears,
         nickTakeRate: altNickTake,
         costPctOfPremium,
+        carrierDealMonth: effectiveCarrierDeal,
       }),
-    [cohorts, churn, yoyGrowth, timeHorizonYears, altNickTake, costPctOfPremium],
+    [cohorts, churn, yoyGrowth, timeHorizonYears, altNickTake, costPctOfPremium, effectiveCarrierDeal],
   );
 
   // Derived metrics
@@ -715,6 +650,45 @@ export default function Panel2Page() {
                 Nick net
               </button>
             </div>
+          </div>
+
+          {/* Carrier deal toggle — simulates Panel 3's integration effect over time */}
+          <div className="rounded-md border bg-amber-50 dark:bg-amber-950/20 border-amber-500/30 p-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={carrierDealEnabled}
+                  onChange={(e) => setCarrierDealEnabled(e.target.checked)}
+                  className="h-4 w-4"
+                />
+                <span className="text-sm font-medium">
+                  🤝 Assume carrier integration at month{" "}
+                  <select
+                    value={carrierDealMonth}
+                    onChange={(e) => setCarrierDealMonth(Number(e.target.value))}
+                    disabled={!carrierDealEnabled}
+                    className="rounded border bg-background px-2 py-0.5 text-sm disabled:opacity-50"
+                  >
+                    <option value={6}>M6</option>
+                    <option value={12}>M12</option>
+                    <option value={18}>M18</option>
+                    <option value={24}>M24</option>
+                    <option value={36}>M36</option>
+                  </select>
+                </span>
+              </label>
+              <span className="text-xs text-muted-foreground">
+                +15% premium uplift from that month forward (per Panel 3 ROI)
+              </span>
+            </div>
+            {carrierDealEnabled && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Watch the chart — the inflection point is where the carrier
+                deal closes. This connects Panel 2 (compounding) with Panel 3
+                (carrier integration) narratively.
+              </p>
+            )}
           </div>
 
           <Line data={chartData} options={chartOptions} />

@@ -23,10 +23,12 @@ type SuretyStore = {
   // Assumptions (editable globally)
   subAgentOverride: number;
   primaryCommission: number;
+  primaryAgencyCommission: number; // what the primary agency gets when Nick is sub-agent
   cacPct: number;
   opexPct: number;
   setSubAgentOverride: (v: number) => void;
   setPrimaryCommission: (v: number) => void;
+  setPrimaryAgencyCommission: (v: number) => void;
   setCacPct: (v: number) => void;
   setOpexPct: (v: number) => void;
 
@@ -57,10 +59,12 @@ export const useSuretyStore = create<SuretyStore>()(
 
       subAgentOverride: 0.03,
       primaryCommission: 0.15,
+      primaryAgencyCommission: 0.12,
       cacPct: 0.012,
       opexPct: 0.004,
       setSubAgentOverride: (v) => set({ subAgentOverride: v }),
       setPrimaryCommission: (v) => set({ primaryCommission: v }),
+      setPrimaryAgencyCommission: (v) => set({ primaryAgencyCommission: v }),
       setCacPct: (v) => set({ cacPct: v }),
       setOpexPct: (v) => set({ opexPct: v }),
 
@@ -81,10 +85,6 @@ export const useSuretyStore = create<SuretyStore>()(
     },
   ),
 );
-
-// Legacy constant kept for backwards compat (Panel 1 help text still references it).
-// Actual churn used in LTV now comes from store.churn.
-export const LTV_CHURN = 0.1;
 
 export function ltvMultiplier(renewalRate: number, years: number, churn = 0.1) {
   const r = renewalRate * (1 - churn);

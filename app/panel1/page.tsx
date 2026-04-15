@@ -3,12 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { money, pct } from "@/lib/utils";
+import Link from "next/link";
 import {
   useSuretyStore,
   ltvMultiplier,
-  LTV_CHURN,
   type PortfolioBond,
 } from "@/lib/store";
+import { simulatePortfolio } from "@/lib/simulation";
 import {
   MetricCard,
   NumberSliderInput,
@@ -53,7 +54,6 @@ type Snapshot = {
   timeframe: Timeframe;
 };
 
-const PRIMARY_AGENCY_COMMISSION = 0.12;
 
 function creditMultiplier(score: number) {
   const normalized = (score - 550) / (800 - 550);
@@ -247,6 +247,7 @@ export default function Panel1Page() {
   const timeHorizonYears = useSuretyStore((s) => s.timeHorizonYears);
   const setTimeHorizonYears = useSuretyStore((s) => s.setTimeHorizonYears);
   const churn = useSuretyStore((s) => s.churn);
+  const primaryAgencyCommission = useSuretyStore((s) => s.primaryAgencyCommission);
 
   // ─── Panel 1 local state ───
   const [view, setView] = useState<View>("single");
@@ -297,7 +298,7 @@ export default function Panel1Page() {
   }, []);
 
   const nickTakeRate = mode === "sub-agent" ? subAgentOverride : primaryCommission;
-  const primaryTakeRate = mode === "sub-agent" ? PRIMARY_AGENCY_COMMISSION : 0;
+  const primaryTakeRate = mode === "sub-agent" ? primaryAgencyCommission : 0;
   const channelTotal = nickTakeRate + primaryTakeRate;
   const carrierRetention = 1 - channelTotal;
   const upsideMultiplier = primaryCommission / subAgentOverride;
@@ -508,6 +509,38 @@ export default function Panel1Page() {
   };
 
   // ========== PORTFOLIO AGGREGATE WATERFALL DATA ==========
+  // ========== PANEL 2 PREVIEW (cumulative over horizon, via shared sim) ==========
+  const panel2Preview = useMemo(() => {
+    if (portfolio.length === 0 || bondTypes.length === 0) return null;
+    const cohorts = portfolio
+      .map((b) => {
+        const bt = bondTypes.find((t) => t.id === b.bondTypeId);
+        if (!bt) return null;
+        const rate = Number(bt.avg_premium_rate) * creditMultiplier(b.creditScore);
+        return {
+          premiumPerBond: b.bondAmount * rate,
+          quantity: b.quantity,
+          renewalRate: Number(bt.renewal_rate),
+        };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+    if (cohorts.length === 0) return null;
+    const costPct = cacPct + opexPct + teamPct;
+    const sim = simulatePortfolio({
+      cohorts,
+      churn,
+      yoyGrowth: 0, // preview uses no growth assumption — Panel 2 has the slider
+      horizonYears: timeHorizonYears,
+      nickTakeRate,
+      costPctOfPremium: costPct,
+    });
+    const last = sim[sim.length - 1];
+    return {
+      cumulativePremium: last?.cumulativePremium ?? 0,
+      cumulativeNickNet: last?.cumulativeNickNet ?? 0,
+    };
+  }, [portfolio, bondTypes, cacPct, opexPct, churn, timeHorizonYears, nickTakeRate]);
+
   const portfolioWaterfall = useMemo(() => {
     const p = portfolioCalc.totalPremium;
     const carrier = p * carrierRetention;
@@ -938,10 +971,10 @@ export default function Panel1Page() {
                   <div className="flex justify-between text-muted-foreground pl-4">
                     <span>
                       &nbsp;&nbsp;&nbsp;&nbsp;├─ Primary agency (
-                      {pct(PRIMARY_AGENCY_COMMISSION)})
+                      {pct(primaryAgencyCommission)})
                     </span>
                     <span className="font-mono">
-                      {money(singleCalc.premium * PRIMARY_AGENCY_COMMISSION)}
+                      {money(singleCalc.premium * primaryAgencyCommission)}
                     </span>
                   </div>
                 )}
@@ -1402,6 +1435,39 @@ export default function Panel1Page() {
             </div>
           </div>
 
+          {/* Panel 2 preview card */}
+          {panel2Preview && (
+            <Link
+              href="/panel2"
+              className="block rounded-lg border-2 border-emerald-500/30 bg-emerald-50/30 dark:bg-emerald-950/10 p-5 hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 transition"
+            >
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div>
+                  <p className="text-xs uppercase tracking-widest text-emerald-700 dark:text-emerald-400 font-semibold mb-1">
+                    🔄 Preview: how this portfolio compounds over {timeHorizonYears} years
+                  </p>
+                  <p className="text-sm text-muted-foreground max-w-xl">
+                    Using Panel 2&apos;s cohort engine (0% growth baseline).
+                    Click to see the full simulation with YoY growth slider, year-by-year
+                    table, and the &quot;assume carrier deal at month X&quot; toggle.
+                  </p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-xs text-muted-foreground">Cumulative Nick net</p>
+                  <p className="text-3xl font-bold text-emerald-700 dark:text-emerald-400">
+                    {money(panel2Preview.cumulativeNickNet)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    on {money(panel2Preview.cumulativePremium)} premium flowing through
+                  </p>
+                  <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium mt-1">
+                    Open Panel 2 →
+                  </p>
+                </div>
+              </div>
+            </Link>
+          )}
+
           {/* Portfolio aggregate waterfall */}
           {portfolio.length > 0 && portfolioCalc.totalPremium > 0 && (
             <div className="rounded-lg border p-5">
@@ -1447,7 +1513,7 @@ export default function Panel1Page() {
                   <div className="flex justify-between text-muted-foreground pl-4">
                     <span>
                       &nbsp;&nbsp;&nbsp;&nbsp;├─ Primary agency (
-                      {pct(PRIMARY_AGENCY_COMMISSION)})
+                      {pct(primaryAgencyCommission)})
                     </span>
                     <span className="font-mono">
                       {money(portfolioWaterfall.primaryAg)}
