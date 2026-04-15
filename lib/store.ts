@@ -34,6 +34,14 @@ type SuretyStore = {
   timeHorizonYears: number;
   setTimeHorizonYears: (y: number) => void;
 
+  // Churn (used for LTV survival in Panel 1 + cohort survival in Panel 2)
+  churn: number;
+  setChurn: (v: number) => void;
+
+  // Year-over-year growth in bond volume (used in Panel 2)
+  yoyGrowth: number;
+  setYoyGrowth: (v: number) => void;
+
   // Derived: total bonds per month across all portfolio rows
   getTotalBondsPerMonth: () => number;
 };
@@ -59,6 +67,12 @@ export const useSuretyStore = create<SuretyStore>()(
       timeHorizonYears: 5,
       setTimeHorizonYears: (y) => set({ timeHorizonYears: y }),
 
+      churn: 0.1,
+      setChurn: (v) => set({ churn: v }),
+
+      yoyGrowth: 0,
+      setYoyGrowth: (v) => set({ yoyGrowth: v }),
+
       getTotalBondsPerMonth: () =>
         get().portfolio.reduce((s, b) => s + b.quantity, 0),
     }),
@@ -68,10 +82,12 @@ export const useSuretyStore = create<SuretyStore>()(
   ),
 );
 
+// Legacy constant kept for backwards compat (Panel 1 help text still references it).
+// Actual churn used in LTV now comes from store.churn.
 export const LTV_CHURN = 0.1;
 
-export function ltvMultiplier(renewalRate: number, years: number) {
-  const r = renewalRate * (1 - LTV_CHURN);
+export function ltvMultiplier(renewalRate: number, years: number, churn = 0.1) {
+  const r = renewalRate * (1 - churn);
   let mult = 0;
   for (let y = 0; y < years; y++) mult += Math.pow(r, y);
   return mult;

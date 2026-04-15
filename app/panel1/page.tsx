@@ -246,6 +246,7 @@ export default function Panel1Page() {
   const setOpexPct = useSuretyStore((s) => s.setOpexPct);
   const timeHorizonYears = useSuretyStore((s) => s.timeHorizonYears);
   const setTimeHorizonYears = useSuretyStore((s) => s.setTimeHorizonYears);
+  const churn = useSuretyStore((s) => s.churn);
 
   // ─── Panel 1 local state ───
   const [view, setView] = useState<View>("single");
@@ -363,7 +364,7 @@ export default function Panel1Page() {
       const nickNetPerBond = nickGrossPerBond - nickCAC - nickOpex - nickTeam;
 
       const renewalRate = Number(bondType.renewal_rate);
-      const ltvMult = ltvMultiplier(renewalRate, timeHorizonYears);
+      const ltvMult = ltvMultiplier(renewalRate, timeHorizonYears, churn);
       const ltvPerBond = nickNetPerBond * ltvMult;
 
       totalPremium += premiumTotal;
@@ -404,7 +405,7 @@ export default function Panel1Page() {
       totalLTV,
       blendedMargin: totalPremium > 0 ? totalNickNet / totalPremium : 0,
     };
-  }, [portfolio, bondTypes, nickTakeRate, cacPct, opexPct, timeMultiplier, timeHorizonYears]);
+  }, [portfolio, bondTypes, nickTakeRate, cacPct, opexPct, timeMultiplier, timeHorizonYears, churn]);
 
   // Portfolio actions
   const addPortfolioBond = () => {
@@ -439,7 +440,7 @@ export default function Panel1Page() {
         bondTypeId: selectedId,
         bondAmount,
         creditScore,
-        quantity: 100,
+        quantity: 1,
       },
     ]);
     setNextUid(nextUid + 1);
@@ -906,8 +907,8 @@ export default function Panel1Page() {
                 + Add this bond to portfolio
               </button>
               <p className="text-xs text-muted-foreground text-center">
-                Copies current bond type, amount and credit score into the
-                portfolio with quantity = 100 (editable after).
+                Adds 1 bond with the current type, amount and credit score.
+                Edit the quantity in the Portfolio view.
               </p>
             </div>
 
@@ -1255,8 +1256,8 @@ export default function Panel1Page() {
                   <p>
                     <strong>Formula:</strong> LTV = net/bond ×{" "}
                     Σ(y=0..{timeHorizonYears - 1}) r^y where r = renewal_rate × (1 −{" "}
-                    {pct(LTV_CHURN)} churn). Currently summed over {timeHorizonYears}{" "}
-                    years.
+                    {pct(churn)} churn). Summed over {timeHorizonYears}{" "}
+                    years. Churn is shared with Panel 2.
                   </p>
                   <p>
                     <strong>Why it matters:</strong> an agency valued on year-1
@@ -1282,7 +1283,7 @@ export default function Panel1Page() {
                       </th>
                       <th
                         className="pb-2 pr-2 text-right"
-                        title={`Lifetime Value per bond over ${timeHorizonYears} years using its renewal rate and ${pct(LTV_CHURN)} annual churn`}
+                        title={`Lifetime Value per bond over ${timeHorizonYears} years using its renewal rate and ${pct(churn)} annual churn`}
                       >
                         LTV/bond ({timeHorizonYears}y)
                       </th>
