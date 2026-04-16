@@ -18,10 +18,11 @@ export function Nav() {
     return null;
   }
   return (
-    <nav className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur">
+    <nav className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur-md">
       <div className="mx-auto max-w-6xl px-4 md:px-10 h-14 flex items-center justify-between gap-4">
-        <Link href="/" className="font-semibold text-sm tracking-tight">
-          Surety Economics
+        <Link href="/" className="font-semibold text-sm tracking-tight flex items-center gap-2">
+          <span className="inline-block h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
+          <span>Surety Economics</span>
         </Link>
         <div className="flex gap-1 overflow-x-auto">
           {LINKS.map((l) => {
@@ -33,8 +34,8 @@ export function Nav() {
                 href={l.href}
                 className={`px-3 py-1.5 rounded-md text-xs md:text-sm whitespace-nowrap transition ${
                   active
-                    ? "bg-foreground text-background"
-                    : "text-muted-foreground hover:bg-muted"
+                    ? "bg-amber-500 text-slate-950 font-medium"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
                 {l.label}
@@ -46,7 +47,7 @@ export function Nav() {
           href="https://buysuretybonds.com"
           target="_blank"
           rel="noopener noreferrer"
-          className="hidden md:inline text-xs text-muted-foreground hover:text-foreground transition"
+          className="hidden md:inline text-xs text-muted-foreground hover:text-amber-400 transition"
         >
           BuySuretyBonds.com →
         </a>

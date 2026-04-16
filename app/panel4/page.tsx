@@ -171,11 +171,20 @@ export default function Panel4Page() {
           Carrier Appetite Match
         </h1>
         <p className="text-muted-foreground max-w-3xl">
-          Why is a multi-carrier marketplace a defensible business? Because any
-          single carrier only approves ~60% of applicants who fit their
-          appetite. By stacking carriers, approval odds climb to 99%. That&apos;s
-          why customers choose BuySuretyBonds over going direct — it&apos;s not
-          price, it&apos;s <strong>approval odds.</strong>
+          Why is a multi-carrier marketplace a defensible business? Any single
+          carrier has a finite <strong>appetite</strong> — they only quote
+          certain bond types, in certain states, up to certain treasury
+          limits. Multi-carrier access expands the menu of placements and
+          materially improves the <strong>placement rate on hard-to-place
+          risks</strong> (sub-680 FICO, large bonds, niche states). That&apos;s the
+          marketplace moat — not price.
+        </p>
+        <p className="text-xs text-muted-foreground/80 italic">
+          Approval modeling below is a directional simulation. Real approval
+          rates depend on the &ldquo;3 Cs&rdquo; (character, capacity, capital) and
+          carrier-specific underwriting. Industry-level approval data is not
+          publicly disclosed by SFAA — these numbers should be calibrated
+          against Nick&apos;s own BuySuretyBonds book before pitching to investors.
         </p>
       </header>
 
