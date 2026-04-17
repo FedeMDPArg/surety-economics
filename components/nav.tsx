@@ -9,6 +9,7 @@ const LINKS = [
   { href: "/panel2", label: "2 · Renewal Engine" },
   { href: "/panel3", label: "3 · Carrier Pitch" },
   { href: "/panel4", label: "4 · Appetite Match" },
+  { href: "/assumptions", label: "Sources" },
 ];
 
 export function Nav() {
