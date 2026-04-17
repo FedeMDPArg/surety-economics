@@ -112,7 +112,7 @@ export default function Panel3Page() {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [chatMode, setChatMode] = useState<"unknown" | "mock" | "live">("unknown");
-  const [chatOpen, setChatOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(true);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
