@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { money, pct } from "@/lib/utils";
-import { MetricCard, NumberSliderInput } from "@/components/panel-ui";
+import { MetricCard, NumberSliderInput, SourcesFooter } from "@/components/panel-ui";
 import { useSuretyStore } from "@/lib/store";
 import { simulatePortfolio, type MonthRow } from "@/lib/simulation";
 import {
@@ -736,6 +736,31 @@ export default function Panel2Page() {
         </div>
       </div>
 
+      {/* SENSITIVITY MATRIX */}
+      <section className="space-y-3">
+        <div>
+          <h3 className="font-semibold text-base">
+            Sensitivity analysis — how robust is the moat?
+          </h3>
+          <p className="text-xs text-muted-foreground">
+            Cumulative Nick net over {timeHorizonYears} years across
+            different churn × renewal rate scenarios. Your current
+            assumptions are highlighted.
+          </p>
+        </div>
+        <div className="rounded-lg border p-5 overflow-x-auto">
+          <SensitivityMatrix
+            cohorts={cohorts}
+            yoyGrowth={yoyGrowth}
+            horizonYears={timeHorizonYears}
+            nickTakeRate={nickTakeRate}
+            costPctOfPremium={costPctOfPremium}
+            currentChurn={churn}
+            carrierDealMonth={effectiveCarrierDeal}
+          />
+        </div>
+      </section>
+
       {/* CTA to Panel 3 */}
       <div className="rounded-lg border p-5 flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -752,6 +777,135 @@ export default function Panel2Page() {
           Continue to Panel 3 →
         </Link>
       </div>
+
+      <SourcesFooter panelSources={[
+        "Renewal rates 75-88% (commercial), ~60% (contract): SFAA industry reports",
+        "Cohort-based simulation with discrete annual renewal events",
+        "Churn default 10%: conservative estimate (business closures + competitive loss)",
+        "YoY growth: user input (default 0%)",
+        "Carrier integration uplift +15%: McKinsey insurance digitalization (not surety-specific)",
+        "Premium per bond: derived from Panel 1 portfolio (real rates × credit multiplier)"
+      ]} />
     </div>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────
+ * Sensitivity Matrix Component
+ * Shows cumulative Nick net across churn × blended renewal scenarios
+ * ──────────────────────────────────────────────────────────── */
+const CHURN_SCENARIOS = [0.05, 0.10, 0.15, 0.20];
+const RENEWAL_SCENARIOS = [0.60, 0.70, 0.80, 0.88];
+
+function SensitivityMatrix({
+  cohorts,
+  yoyGrowth,
+  horizonYears,
+  nickTakeRate,
+  costPctOfPremium,
+  currentChurn,
+  carrierDealMonth,
+}: {
+  cohorts: { premiumPerBond: number; quantity: number; renewalRate: number }[];
+  yoyGrowth: number;
+  horizonYears: number;
+  nickTakeRate: number;
+  costPctOfPremium: number;
+  currentChurn: number;
+  carrierDealMonth: number | null;
+}) {
+  // For each cell, run the sim with modified churn and renewal override
+  const cells = CHURN_SCENARIOS.map((ch) =>
+    RENEWAL_SCENARIOS.map((rr) => {
+      // Override renewal rate for all cohorts
+      const adjustedCohorts = cohorts.map((c) => ({
+        ...c,
+        renewalRate: rr,
+      }));
+      const sim = simulatePortfolio({
+        cohorts: adjustedCohorts,
+        churn: ch,
+        yoyGrowth,
+        horizonYears,
+        nickTakeRate,
+        costPctOfPremium,
+        carrierDealMonth,
+      });
+      return sim[sim.length - 1]?.cumulativeNickNet ?? 0;
+    }),
+  );
+
+  // Find the "current" cell for highlighting
+  const currentChurnIdx = CHURN_SCENARIOS.indexOf(currentChurn);
+  const avgRenewal =
+    cohorts.length > 0
+      ? cohorts.reduce((s, c) => s + c.renewalRate * c.quantity, 0) /
+        cohorts.reduce((s, c) => s + c.quantity, 0)
+      : 0.8;
+  const currentRenewalIdx = RENEWAL_SCENARIOS.reduce(
+    (best, rr, i) =>
+      Math.abs(rr - avgRenewal) < Math.abs(RENEWAL_SCENARIOS[best] - avgRenewal)
+        ? i
+        : best,
+    0,
+  );
+
+  const maxVal = Math.max(...cells.flat());
+  const minVal = Math.min(...cells.flat());
+
+  return (
+    <table className="w-full text-xs">
+      <thead>
+        <tr>
+          <th className="p-2 text-left text-muted-foreground">
+            Churn ↓ / Renewal →
+          </th>
+          {RENEWAL_SCENARIOS.map((rr) => (
+            <th key={rr} className="p-2 text-right font-mono">
+              {(rr * 100).toFixed(0)}%
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {CHURN_SCENARIOS.map((ch, ci) => (
+          <tr key={ch}>
+            <td className="p-2 font-mono text-muted-foreground">
+              {(ch * 100).toFixed(0)}% churn
+            </td>
+            {RENEWAL_SCENARIOS.map((rr, ri) => {
+              const val = cells[ci][ri];
+              const isCurrentish =
+                ci === currentChurnIdx && ri === currentRenewalIdx;
+              // Color intensity: green for high, red for low
+              const ratio =
+                maxVal !== minVal ? (val - minVal) / (maxVal - minVal) : 0.5;
+              const bg =
+                ratio > 0.6
+                  ? "bg-emerald-500/20 text-emerald-300"
+                  : ratio > 0.3
+                    ? "bg-amber-500/15 text-amber-300"
+                    : "bg-rose-500/15 text-rose-300";
+              return (
+                <td
+                  key={rr}
+                  className={`p-2 text-right font-mono font-semibold rounded-md ${bg} ${
+                    isCurrentish
+                      ? "ring-2 ring-amber-500 ring-offset-1 ring-offset-background"
+                      : ""
+                  }`}
+                >
+                  {val >= 1_000_000
+                    ? `$${(val / 1_000_000).toFixed(1)}M`
+                    : val >= 1_000
+                      ? `$${(val / 1_000).toFixed(0)}K`
+                      : `$${val.toFixed(0)}`}
+                </td>
+              );
+            })}
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }

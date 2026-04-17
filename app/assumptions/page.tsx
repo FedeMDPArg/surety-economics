@@ -254,6 +254,83 @@ export default function AssumptionsPage() {
         </div>
       </section>
 
+      {/* VALUATION FRAMEWORK */}
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <span className="inline-block h-3 w-3 rounded-full bg-sky-500" />
+          Valuation framework — comparable multiples
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          How would an investor value Nick&apos;s business? Surety
+          distribution has characteristics of both insurance brokerage and
+          SaaS (mandated, recurring, high retention). Here are relevant
+          public comps.
+        </p>
+        <div className="rounded-xl border overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-muted/30 text-left text-xs uppercase text-muted-foreground">
+                <th className="p-3">Comparable</th>
+                <th className="p-3">Type</th>
+                <th className="p-3 text-right">Revenue multiple</th>
+                <th className="p-3">Relevance</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-b hover:bg-muted/20">
+                <td className="p-3 font-medium">Gallagher / AssuredPartners</td>
+                <td className="p-3 text-muted-foreground">Insurance brokerage M&A</td>
+                <td className="p-3 text-right font-mono">12-15x EBITDA</td>
+                <td className="p-3 text-xs text-muted-foreground">Large-cap broker consolidation (2024 $13.45B deal)</td>
+              </tr>
+              <tr className="border-b hover:bg-muted/20">
+                <td className="p-3 font-medium">Risk Strategies (JW + Lance)</td>
+                <td className="p-3 text-muted-foreground">Surety-specific rollup</td>
+                <td className="p-3 text-right font-mono">2-4x revenue</td>
+                <td className="p-3 text-xs text-muted-foreground">Direct comp — online surety retail acquired into brokerage</td>
+              </tr>
+              <tr className="border-b hover:bg-muted/20">
+                <td className="p-3 font-medium">Lemonade (LMND)</td>
+                <td className="p-3 text-muted-foreground">Insurtech public co</td>
+                <td className="p-3 text-right font-mono">2-3x revenue</td>
+                <td className="p-3 text-xs text-muted-foreground">Digital-first insurance; post-2021 correction</td>
+              </tr>
+              <tr className="border-b hover:bg-muted/20">
+                <td className="p-3 font-medium">Vertafore / Applied Systems</td>
+                <td className="p-3 text-muted-foreground">Insurance SaaS</td>
+                <td className="p-3 text-right font-mono">8-12x revenue</td>
+                <td className="p-3 text-xs text-muted-foreground">Infrastructure software for agencies — comp for BondGenius as SaaS</td>
+              </tr>
+              <tr className="border-b hover:bg-muted/20">
+                <td className="p-3 font-medium">Bold Penguin / Travelers acquisition</td>
+                <td className="p-3 text-muted-foreground">Small commercial exchange</td>
+                <td className="p-3 text-right font-mono">~5x revenue</td>
+                <td className="p-3 text-xs text-muted-foreground">Carrier acquiring distribution technology</td>
+              </tr>
+              <tr className="hover:bg-muted/20">
+                <td className="p-3 font-medium">Corvus / Travelers acquisition</td>
+                <td className="p-3 text-muted-foreground">AI underwriting MGA</td>
+                <td className="p-3 text-right font-mono">~4x revenue</td>
+                <td className="p-3 text-xs text-muted-foreground">Precedent for carrier buying AI-native distribution</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div className="rounded-lg border bg-card p-4 text-sm">
+          <p className="font-medium mb-1">💡 Implication for Nick&apos;s business</p>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            As a <strong>sub-agent marketplace</strong>, Nick would likely
+            trade at <strong>2-4x revenue</strong> (Risk Strategies comp).
+            As a <strong>primary agent with SaaS layer</strong> (BondGenius),
+            the comp shifts to <strong>5-8x revenue</strong> (Bold
+            Penguin / Vertafore blend). The regulatory unlock from
+            sub-agent → primary isn&apos;t just a 5x on per-bond revenue — it
+            also lifts the <em>valuation multiple category</em> from
+            brokerage to tech-enabled distribution. Double compounding.
+          </p>
+        </div>
+      </section>
+
       {/* PRIMARY SOURCES LIST */}
       <section className="rounded-xl border bg-card p-6">
         <h2 className="text-lg font-semibold mb-3">Primary sources</h2>

@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import { money, pct } from "@/lib/utils";
-import { MetricCard, NumberSliderInput } from "@/components/panel-ui";
+import { MetricCard, NumberSliderInput, SourcesFooter } from "@/components/panel-ui";
 import { useSuretyStore } from "@/lib/store";
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
@@ -685,6 +685,16 @@ export default function Panel3Page() {
           Continue to Panel 4 →
         </Link>
       </div>
+
+      <SourcesFooter panelSources={[
+        "Carrier GWP estimates: directionally from 10-K filings (Apr 2024 snapshot)",
+        "Digital premium uplift +15%: McKinsey insurance reports (general P&C, not surety-specific)",
+        "FTE reduction 4 per $10M GWP: insurtech industry benchmarks",
+        "Loaded FTE cost $120K/yr: US insurance industry average",
+        "Lost renewals recoverable 13%: friction-loss pattern estimate",
+        "Integration cost $500K: industry standard for eng + vendor DD + legal",
+        "Nick's commission: from shared store (editable in Panel 1)"
+      ]} />
     </div>
   );
 }

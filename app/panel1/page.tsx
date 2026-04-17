@@ -14,6 +14,7 @@ import {
   MetricCard,
   NumberSliderInput,
   TableNumberInput,
+  SourcesFooter,
 } from "@/components/panel-ui";
 import {
   Chart as ChartJS,
@@ -1633,6 +1634,15 @@ export default function Panel1Page() {
           </p>
         </div>
       )}
+
+      <SourcesFooter panelSources={[
+        "Premium rates 1-3%: SFAA, NFP, SuretyBonds.com",
+        "Channel commission 10-40% (typical 15-20%): Integrity Surety, Surety One disclosures",
+        "Sub-agent override 3%, Primary commission 15%: internal estimates (editable)",
+        "CAC 1.2%, OpEx 0.4%: internal estimates (editable)",
+        "LTV calculation uses renewal rates from Supabase bond_types table",
+        "Credit multiplier: 0.7x (800 FICO) to 1.5x (550 FICO) — directional, not actuarial"
+      ]} />
     </div>
   );
 }

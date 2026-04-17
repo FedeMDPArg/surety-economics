@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { money, pct } from "@/lib/utils";
-import { MetricCard, NumberSliderInput } from "@/components/panel-ui";
+import { MetricCard, NumberSliderInput, SourcesFooter } from "@/components/panel-ui";
 import { useSuretyStore } from "@/lib/store";
 
 type CarrierProfile = {
@@ -48,6 +48,7 @@ function computeCarrierMatch(
     businessCategory: string;
     bondAmount: number;
     creditScore: number;
+    baseApproval: number;
   },
 ) {
   const treasury = Number(carrier.treasury_limit);
@@ -66,10 +67,9 @@ function computeCarrierMatch(
   const creditNormalized = (params.creditScore - 720) / 80; // 1 per 80 points above 720
   const creditAdjustment = 1 + creditNormalized * 0.15;
 
-  const baseApproval = 0.6;
   const approvalProb = Math.max(
     0,
-    Math.min(0.98, baseApproval * fitScore * creditAdjustment),
+    Math.min(0.98, params.baseApproval * fitScore * creditAdjustment),
   );
 
   return {
@@ -106,6 +106,8 @@ export default function Panel4Page() {
   const [businessType, setBusinessType] = useState("contractor");
   const [bondAmount, setBondAmount] = useState(100_000);
   const [creditScore, setCreditScore] = useState(720);
+  // Base approval is now user-editable — not a fixed claim
+  const [baseApprovalPct, setBaseApprovalPct] = useState(60);
 
   useEffect(() => {
     const supabase = createClient();
@@ -133,10 +135,11 @@ export default function Panel4Page() {
           businessCategory,
           bondAmount,
           creditScore,
+          baseApproval: baseApprovalPct / 100,
         }),
       )
       .sort((a, b) => b.approvalProb - a.approvalProb);
-  }, [carriers, state, businessType, businessCategory, bondAmount, creditScore]);
+  }, [carriers, state, businessType, businessCategory, bondAmount, creditScore, baseApprovalPct]);
 
   // Combined approval for top-N
   const combined = useMemo(() => {
@@ -242,6 +245,23 @@ export default function Panel4Page() {
             step={10}
             onChange={setCreditScore}
           />
+          <div className="md:col-span-2">
+            <NumberSliderInput
+              label="Base approval probability per carrier"
+              value={baseApprovalPct}
+              min={20}
+              max={90}
+              step={5}
+              onChange={setBaseApprovalPct}
+              suffix="%"
+              sublabel="Editable — plug in your real conversion rate from BuySuretyBonds data"
+            />
+            <p className="text-[10px] text-muted-foreground mt-1 italic">
+              Default 60% is a directional estimate. SFAA does not publish
+              industry approval rates. Use your actual single-carrier placement
+              rate here to make the multi-carrier comparison defensible.
+            </p>
+          </div>
         </div>
       </section>
 
@@ -499,6 +519,15 @@ export default function Panel4Page() {
           </Link>
         </div>
       </div>
+
+      <SourcesFooter panelSources={[
+        "Carrier profiles: 10 carriers seeded from public data (AM Best, Treasury 570 listings)",
+        "Treasury limits: directional estimates from carrier 10-Ks (Apr 2024)",
+        "Fit score formula: 0.4×treasury + 0.3×state + 0.3×segment (proprietary weighting)",
+        "Base approval probability 60%: directional estimate — SFAA does not publish approval rates",
+        "Combined probability: 1 − ∏(1−p_i), assumes independent underwriting decisions",
+        "⚠️ Calibrate against Nick's actual BuySuretyBonds conversion data before investor use"
+      ]} />
     </div>
   );
 }

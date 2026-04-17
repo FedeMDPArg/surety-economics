@@ -1,5 +1,7 @@
 "use client";
 
+import { motion } from "framer-motion";
+
 export function MetricCard({
   label,
   value,
@@ -18,17 +20,28 @@ export function MetricCard({
     rose: "bg-rose-50 dark:bg-rose-950/30 border-rose-600/30",
   };
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
       className={`rounded-lg border p-4 ${accent ? accentClass[accent] : ""}`}
     >
       <p className="text-xs uppercase tracking-widest text-muted-foreground">
         {label}
       </p>
-      <p className="text-2xl font-bold mt-1">{value}</p>
+      <motion.p
+        key={value}
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.2 }}
+        className="text-2xl font-bold mt-1"
+      >
+        {value}
+      </motion.p>
       {sublabel && (
         <p className="text-xs text-muted-foreground mt-1">{sublabel}</p>
       )}
-    </div>
+    </motion.div>
   );
 }
 
@@ -69,6 +82,34 @@ export function SliderInput({
 }
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+
+/**
+ * Sources footer — collapsible, links to /assumptions page.
+ * Include at the bottom of every panel for credibility.
+ */
+export function SourcesFooter({ panelSources }: { panelSources: string[] }) {
+  return (
+    <details className="rounded-lg border bg-card/40 p-4 text-xs">
+      <summary className="cursor-pointer font-medium text-muted-foreground">
+        📊 Data sources & assumptions for this panel
+      </summary>
+      <ul className="mt-2 space-y-1 text-muted-foreground list-disc pl-5">
+        {panelSources.map((s, i) => (
+          <li key={i}>{s}</li>
+        ))}
+        <li>
+          <Link
+            href="/assumptions"
+            className="text-amber-400 hover:underline font-medium"
+          >
+            View all assumptions, disclaimers & comparable valuations →
+          </Link>
+        </li>
+      </ul>
+    </details>
+  );
+}
 
 /**
  * Combined slider + number input. Both stay in sync.
